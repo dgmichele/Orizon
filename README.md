@@ -1,8 +1,6 @@
 # Orizon
 
-**Orizon** è un'applicazione backend scritta in Node.js che simula la logica di business di un'agenzia di viaggi fittizia. Il progetto espone API REST per la gestione di utenti, prodotti e ordini, offrendo un ambiente ideale per sperimentare e imparare la costruzione di un'API con logica di business realistica.
-
----
+**Orizon** è un'applicazione backend che simula la logica di business di un'agenzia di viaggi fittizia. Il progetto espone API REST per la gestione di utenti, prodotti e ordini, offrendo un ambiente ideale per sperimentare e imparare la costruzione di un'API con logica di business realistica.
 
 ## Tecnologie e Framework Utilizzati
 
@@ -13,8 +11,6 @@
 - **dotenv** – Gestione delle variabili di ambiente.
 - **Nodemon** – Strumento per lo sviluppo che riavvia automaticamente il server ad ogni modifica.
 - **Jest** e **Supertest** – Per l'esecuzione dei test automatizzati.
-
----
 
 ## Struttura e Funzionamento delle API
 
@@ -75,15 +71,11 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
   - **PUT**: Verifica l'aggiornamento di un ordine, modificando le associazioni con utenti e prodotti.
   - **DELETE**: Testa l'eliminazione di un ordine e delle relative associazioni.
 
----
-
 ## Requisiti
 
 - **Node.js** (versione consigliata 14.x o superiore)
 - **MySQL** (per il database)
 - **npm** (Node Package Manager)
-
----
 
 ## Installazione
 
@@ -94,8 +86,6 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
    cd orizon
 
 2. **Installa le dipendenze:**
-
----
 
 ## Configurazione
 
@@ -115,8 +105,6 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 
 2. **Assicurati di avere un database MySQL** con il nome indicato in `DB_NAME`. Dovrai creare le tabelle per `users`, `products`, `orders`, `order_users` e `order_products` secondo le specifiche della tua applicazione.
 
----
-
 ## Utilizzo
 
 1. **Avvia il server:**
@@ -130,8 +118,6 @@ Oppure, per avviare in modalità sviluppo con **nodemon**:
     npm run dev
 
 2. **Accedi all'API** visitando [http://localhost:3000](http://localhost:3000) nel tuo browser. La root mostra un messaggio di benvenuto: "Benvenuto in Orizon!".
-
----
 
 ## Esecuzione dei Test
 
