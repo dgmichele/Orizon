@@ -111,7 +111,7 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 
 Per avviare il server utilizza il comando:
 
-    npm test
+    npm start
 
 Oppure, per avviare in modalità sviluppo con **nodemon**:
 
