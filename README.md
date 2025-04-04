@@ -51,10 +51,29 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
   - **DELETE**: Elimina un prodotto in base all'ID.
 
 - **routes/orders.js**
+
   - **POST**: Crea un nuovo ordine associando un utente e uno o più prodotti, gestendo transazioni e associazioni in tabelle dedicate.
   - **GET**: Recupera tutti gli ordini, con possibilità di filtrarli per data o per ID di prodotto tramite query string.
   - **PUT**: Aggiorna un ordine esistente modificando le associazioni con utenti e prodotti.
   - **DELETE**: Elimina un ordine e rimuove tutte le relative associazioni.
+
+- **test/users.test.js**
+  - **POST**: Testa la creazione di un nuovo utente con validazione dei campi.
+  - **GET**: Testa il recupero della lista degli utenti.
+  - **PUT**: Testa l'aggiornamento di un utente specificato tramite ID.
+  - **DELETE**: Testa l'eliminazione di un utente in base all'ID.
+- **test/products.test.js**
+
+  - **GET**: Verifica che vengano restituiti tutti i prodotti.
+  - **POST**: Testa la creazione di un nuovo prodotto.
+  - **PUT**: Testa l'aggiornamento del nome di un prodotto esistente tramite ID.
+  - **DELETE**: Testa l'eliminazione di un prodotto in base all'ID.
+
+- **test/orders.test.js**
+  - **POST**: Verifica la creazione di un nuovo ordine, inclusa l'associazione con utente e prodotti e la gestione delle transazioni.
+  - **GET**: Testa il recupero degli ordini, con e senza filtri (es. per data).
+  - **PUT**: Verifica l'aggiornamento di un ordine, modificando le associazioni con utenti e prodotti.
+  - **DELETE**: Testa l'eliminazione di un ordine e delle relative associazioni.
 
 ---
 
@@ -96,7 +115,9 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 
 1. **Avvia il server:**
 
-   npm start
+Per avviare il server utilizza il comando:
+
+    npm test
 
 Oppure, per avviare in modalità sviluppo con **nodemon**:
 
