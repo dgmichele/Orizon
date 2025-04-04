@@ -85,11 +85,19 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 
 1. **Clona il repository:**
 
-   git clone https://github.com/dgmichele/Orizon.git
+Digita prima:
 
-   cd orizon
+git clone https://github.com/dgmichele/Orizon.git
+
+E poi:
+
+cd orizon
 
 2. **Installa le dipendenze:**
+
+Digita:
+
+    npm install
 
 ## Configurazione
 
