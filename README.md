@@ -32,6 +32,10 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 
   - Configura la connessione a MySQL utilizzando le variabili di ambiente.
 
+- **migration.sql**
+
+  - File che serve a ricostruire la struttura del database.
+
 - **routes/users.js**
 
   - **POST**: Crea un nuovo utente richiedendo nome, cognome ed email.
