@@ -90,6 +90,7 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 1. **Clona il repository:**
 
    git clone https://github.com/dgmichele/Orizon.git
+
    cd orizon
 
 2. **Installa le dipendenze:**
@@ -101,10 +102,15 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 1. **Crea un file `.env`** nella root del progetto e inserisci le seguenti variabili di ambiente:
 
    DB_HOST=localhost
+
    DB_USER=root
+
    DB_PASSWORD=latuapassword
+
    DB_NAME=nomedeltuodatabase
+
    DB_PORT=3306
+
    PORT=3000
 
 2. **Assicurati di avere un database MySQL** con il nome indicato in `DB_NAME`. Dovrai creare le tabelle per `users`, `products`, `orders`, `order_users` e `order_products` secondo le specifiche della tua applicazione.
