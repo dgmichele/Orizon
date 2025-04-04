@@ -87,11 +87,11 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 
 Digita prima:
 
-git clone https://github.com/dgmichele/Orizon.git
+    git clone https://github.com/dgmichele/Orizon.git
 
 E poi:
 
-cd orizon
+    cd orizon
 
 2. **Installa le dipendenze:**
 
