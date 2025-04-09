@@ -11,8 +11,15 @@ const knex = require('knex')({
 });
 
 // Test della connessione
-knex.raw('SELECT 1 + 1 AS result')
-  .then(() => console.log('Connessione al database riuscita con Knex!'))
-  .catch(err => console.error('❌ Errore di connessione al database:', err));
+async function testConnection() {
+  try {
+    await knex.raw('SELECT 1 + 1 AS result');
+    console.log('Connessione al database riuscita!');
+  } catch (error) {
+    console.error('❌ Errore di connessione al database:', err);
+  }
+}
+
+testConnection();
 
 module.exports = knex;
