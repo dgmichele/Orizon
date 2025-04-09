@@ -1,18 +1,6 @@
 const express = require("express");
-const pool = require("../db");
+const db = require("../db");
 const router = express.Router();
-
-// Funzione di utilità per ottenere una connessione e gestire le transazioni
-async function getConnection() {
-    const connection = await pool.getConnection();
-    return connection;
-}
-
-// Funzione di utilità per verificare se un ordine esiste
-async function checkOrderExists(orderId, connection) {
-    const [orderRows] = await connection.query("SELECT id FROM orders WHERE id = ?", [orderId]);
-    return orderRows.length > 0;
-}
 
 // Creare un nuovo ordine
 router.post("/", async (req, res) => {
@@ -21,78 +9,115 @@ router.post("/", async (req, res) => {
         return res.status(400).json({ error: "user_id e products sono richiesti" });
     }
 
-    const connection = await getConnection();
     try {
-        await connection.beginTransaction();
+        const orderId = await db.transaction(async trx => {
+            // Verifica utente
+            const userExists = await trx('users').where('id', user_id).first();
+            if (!userExists) throw new Error("Utente non trovato");
 
-        // Verifica utente
-        const [userRows] = await connection.query("SELECT id FROM users WHERE id = ?", [user_id]);
-        if (userRows.length === 0) throw new Error("Utente non trovato");
+            // Verifica prodotti
+            const validProducts = await trx('products')
+                .whereIn('id', products)
+                .select('id');
+                
+            if (validProducts.length !== products.length) {
+                throw new Error("Uno o più prodotti non esistono");
+            }
 
-        // Verifica prodotti
-        const [productRows] = await connection.query("SELECT id FROM products WHERE id IN (?)", [products]);
-        if (productRows.length !== products.length) throw new Error("Uno o più prodotti non esistono");
+            // Creazione ordine
+            const [orderId] = await trx('orders').insert({ 
+                data_creazione: db.fn.now() 
+            });
 
-        // Creazione ordine
-        const [orderResult] = await connection.query("INSERT INTO orders (data_creazione) VALUES (NOW())");
-        const orderId = orderResult.insertId;
+            // Associazioni
+            await trx('order_users').insert({ order_id: orderId, user_id });
+            await trx('order_products').insert(
+                products.map(productId => ({ order_id: orderId, product_id: productId }))
+            );
 
-        // Associazioni dell'ordine con l'utente e i prodotti
-        await connection.query("INSERT INTO order_users (order_id, user_id) VALUES (?, ?)", [orderId, user_id]);
-        const orderProductValues = products.map(productId => [orderId, productId]);
-        await connection.query("INSERT INTO order_products (order_id, product_id) VALUES ?", [orderProductValues]);
+            return orderId;
+        });
 
-        await connection.commit();
-        res.status(201).json({ message: "Ordine creato con successo", orderId });
+        res.status(201).json({ 
+            message: "Ordine creato con successo", 
+            orderId 
+        });
     } catch (error) {
-        await connection.rollback();
         res.status(500).json({ error: error.message });
-    } finally {
-        connection.release();
     }
 });
 
-// Ottenere tutti gli ordini con filtri
+// Ottenere tutti gli ordini con filtri e paginazione
 router.get("/", async (req, res) => {
-    const { data, product_id } = req.query;
-    const connection = await getConnection();
     try {
-        let query = `
-                    SELECT 
-                        o.id AS order_id, 
-                        o.data_creazione, 
-                        u.id AS user_id, 
-                        u.nome AS user_nome, 
-                        u.cognome AS user_cognome, 
-                        u.email AS user_email, 
-                        p.id AS product_id, 
-                        p.nome AS product_nome
-                    FROM orders o
-                    LEFT JOIN order_users ou ON o.id = ou.order_id
-                    LEFT JOIN users u ON ou.user_id = u.id
-                    LEFT JOIN order_products op ON o.id = op.order_id
-                    LEFT JOIN products p ON op.product_id = p.id
-                `.replace(/\s+/g, ' ').trim(); // Normalizza gli spazi bianchi per evitare problemi di formattazione e migliorare la leggibilità della query
-        const queryParams = [];
-        const conditions = [];
+        const { data, product_id, page = 1 } = req.query;
+        const limit = 10;
+        const offset = (page - 1) * limit;
+
+        const query = db('orders as o')
+            .leftJoin('order_users as ou', 'o.id', 'ou.order_id')
+            .leftJoin('users as u', 'ou.user_id', 'u.id')
+            .leftJoin('order_products as op', 'o.id', 'op.order_id')
+            .leftJoin('products as p', 'op.product_id', 'p.id')
+            .select(
+                'o.id as order_id',
+                'o.data_creazione',
+                'u.id as user_id',
+                'u.nome as user_nome',
+                'u.cognome as user_cognome',
+                'u.email as user_email',
+                'p.id as product_id',
+                'p.nome as product_nome'
+            )
+            .orderBy('o.data_creazione', 'desc')
+            .limit(limit)
+            .offset(offset);
 
         if (data) {
-            conditions.push("DATE(o.data_creazione) = ?");
-            queryParams.push(data);
+            query.whereRaw('DATE(o.data_creazione) = ?', [data]);
         }
-        if (product_id) {
-            conditions.push("o.id IN (SELECT DISTINCT order_id FROM order_products WHERE product_id = ?)");
-            queryParams.push(product_id);
-        }
-        if (conditions.length > 0) query += " WHERE " + conditions.join(" AND ");
-        query += " ORDER BY o.data_creazione DESC";
 
-        const [rows] = await connection.query(query, queryParams);
-        res.json(rows);
+        if (product_id) {
+            query.whereExists(
+                db.select('*')
+                    .from('order_products')
+                    .whereRaw('order_products.order_id = o.id')
+                    .where('product_id', product_id)
+            );
+        }
+
+        const orders = await query;
+        
+        // Conta totale ordini
+        const countQuery = db('orders').count('* as count').first();
+        if (data || product_id) {
+            countQuery.modify(q => {
+                if (data) q.whereRaw('DATE(data_creazione) = ?', [data]);
+                if (product_id) {
+                    q.whereExists(
+                        db.select('*')
+                            .from('order_products')
+                            .whereRaw('order_products.order_id = orders.id')
+                            .where('product_id', product_id)
+                    );
+                }
+            });
+        }
+        
+        const total = await countQuery;
+        const totalPages = Math.ceil(total.count / limit);
+
+        res.json({
+            data: orders,
+            pagination: {
+                currentPage: Number(page),
+                totalPages,
+                totalItems: total.count,
+                itemsPerPage: limit
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: "Errore interno del server" });
-    } finally {
-        connection.release();
     }
 });
 
@@ -100,54 +125,54 @@ router.get("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
     const orderId = req.params.id;
     const { utenti, prodotti } = req.body;
+    
     if (!Array.isArray(utenti) || !Array.isArray(prodotti)) {
         return res.status(400).json({ message: "Dati non validi" });
     }
 
-    const connection = await getConnection();
     try {
-        await connection.beginTransaction();
+        await db.transaction(async trx => {
+            const orderExists = await trx('orders').where('id', orderId).first();
+            if (!orderExists) throw new Error("Ordine non trovato");
 
-        if (!(await checkOrderExists(orderId, connection))) {
-            throw new Error("Ordine non trovato");
-        }
+            // Elimina e ricrea associazioni
+            await trx('order_users').where('order_id', orderId).del();
+            await trx('order_products').where('order_id', orderId).del();
 
-        await connection.query("DELETE FROM order_users WHERE order_id = ?", [orderId]);
-        await connection.query("DELETE FROM order_products WHERE order_id = ?", [orderId]);
+            if (utenti.length > 0) {
+                await trx('order_users').insert(
+                    utenti.map(userId => ({ order_id: orderId, user_id: userId }))
+            )}
 
-        if (utenti.length > 0) {
-            await connection.query("INSERT INTO order_users (order_id, user_id) VALUES ?", [utenti.map(userId => [orderId, userId])]);
-        }
-        if (prodotti.length > 0) {
-            await connection.query("INSERT INTO order_products (order_id, product_id) VALUES ?", [prodotti.map(productId => [orderId, productId])]);
-        }
+            if (prodotti.length > 0) {
+                await trx('order_products').insert(
+                    prodotti.map(productId => ({ order_id: orderId, product_id: productId }))
+             )}
+        });
 
-        await connection.commit();
         res.json({ message: "Ordine aggiornato con successo" });
     } catch (error) {
-        await connection.rollback();
         res.status(500).json({ message: error.message });
-    } finally {
-        connection.release();
     }
 });
 
 // Eliminare un ordine
 router.delete("/:id", async (req, res) => {
     const { id } = req.params;
-    const connection = await getConnection();
+
     try {
-        if (!(await checkOrderExists(id, connection))) {
-            return res.status(404).json({ message: "Ordine non trovato" });
-        }
-        await connection.query("DELETE FROM order_products WHERE order_id = ?", [id]);
-        await connection.query("DELETE FROM order_users WHERE order_id = ?", [id]);
-        await connection.query("DELETE FROM orders WHERE id = ?", [id]);
+        await db.transaction(async trx => {
+            const orderExists = await trx('orders').where('id', id).first();
+            if (!orderExists) throw new Error("Ordine non trovato");
+
+            await trx('order_products').where('order_id', id).del();
+            await trx('order_users').where('order_id', id).del();
+            await trx('orders').where('id', id).del();
+        });
+
         res.status(200).json({ message: "Ordine eliminato con successo" });
     } catch (error) {
-        res.status(500).json({ message: "Errore interno del server" });
-    } finally {
-        connection.release();
+        res.status(500).json({ message: error.message });
     }
 });
 
