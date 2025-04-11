@@ -1,8 +1,8 @@
-const express = require("express");
-const db = require("../db");
+const express = require('express');
+const db = require('../db');
 const router = express.Router();
 
-// Creare un nuovo ordine
+// Creare un nuovo ordine (POST /orders)
 router.post("/", async (req, res) => {
     const { user_id, products } = req.body;
     if (!user_id || !Array.isArray(products) || products.length === 0) {
@@ -16,7 +16,7 @@ router.post("/", async (req, res) => {
             if (!userExists) throw new Error("Utente non trovato");
 
             // Verifica prodotti
-            const validProducts = await trx('products')
+            const validProducts = await trx('products') // SELECT id FROM products WHERE id IN (coincide all'array della richiesta es: [1,2,3])
                 .whereIn('id', products)
                 .select('id');
                 
@@ -30,12 +30,12 @@ router.post("/", async (req, res) => {
             });
 
             // Associazioni
-            await trx('order_users').insert({ order_id: orderId, user_id });
+            await trx('order_users').insert({ order_id: orderId, user_id }); // Collego l'utente all’ordine
             await trx('order_products').insert(
-                products.map(productId => ({ order_id: orderId, product_id: productId }))
+                products.map(productId => ({ order_id: orderId, product_id: productId })) // Collego ogni prodotto all’ordine
             );
 
-            return orderId;
+            return orderId; // Ritorno l'ID dell'ordine per poterlo usare fuori (nella risposta)
         });
 
         res.status(201).json({ 
@@ -47,18 +47,19 @@ router.post("/", async (req, res) => {
     }
 });
 
-// Ottenere tutti gli ordini con filtri e paginazione
+// Ottenere tutti gli ordini con filtri e paginazione (GET /orders)
 router.get("/", async (req, res) => {
     try {
         const { data, product_id, page = 1 } = req.query;
         const limit = 10;
         const offset = (page - 1) * limit;
 
-        const query = db('orders as o')
-            .leftJoin('order_users as ou', 'o.id', 'ou.order_id')
-            .leftJoin('users as u', 'ou.user_id', 'u.id')
-            .leftJoin('order_products as op', 'o.id', 'op.order_id')
-            .leftJoin('products as p', 'op.product_id', 'p.id')
+        // Costruisci la query di base
+        const ordersQuery = db('orders as o')
+            .leftJoin('order_users as ou', 'o.id', 'ou.order_id') // LEFT JOIN order_users ou ON o.id = ou.order_id
+            .leftJoin('users as u', 'ou.user_id', 'u.id') // LEFT JOIN users u ON ou.user_id = u.id
+            .leftJoin('order_products as op', 'o.id', 'op.order_id') // LEFT JOIN order_products op ON o.id = op.order_id
+            .leftJoin('products as p', 'op.product_id', 'p.id') // LEFT JOIN products p ON op.product_id = p.id
             .select(
                 'o.id as order_id',
                 'o.data_creazione',
@@ -69,54 +70,64 @@ router.get("/", async (req, res) => {
                 'p.id as product_id',
                 'p.nome as product_nome'
             )
-            .orderBy('o.data_creazione', 'desc')
-            .limit(limit)
-            .offset(offset);
+            .orderBy('o.data_creazione', 'desc');
 
+        // Filtra gli ordini in base alla data di creazione
         if (data) {
-            query.whereRaw('DATE(o.data_creazione) = ?', [data]);
+            ordersQuery.whereRaw('DATE(o.data_creazione) = ?', [data]);
         }
-
+        
+        // Filtra gli ordini che hanno il prodotto specificato
         if (product_id) {
-            query.whereExists(
+            ordersQuery.whereExists(
                 db.select('*')
                     .from('order_products')
                     .whereRaw('order_products.order_id = o.id')
                     .where('product_id', product_id)
             );
+            
+            // Filtra anche i risultati per mostrare solo il prodotto richiesto
+            ordersQuery.andWhere('p.id', product_id);
         }
 
-        const orders = await query;
-        
-        // Conta totale ordini
-        const countQuery = db('orders').count('* as count').first();
-        if (data || product_id) {
-            countQuery.modify(q => {
-                if (data) q.whereRaw('DATE(data_creazione) = ?', [data]);
-                if (product_id) {
-                    q.whereExists(
-                        db.select('*')
-                            .from('order_products')
-                            .whereRaw('order_products.order_id = orders.id')
-                            .where('product_id', product_id)
-                    );
+        // Query per contare il totale degli ordini (per la paginazione)
+        const countQuery = db('orders as o')
+            .countDistinct('o.id as count');
+
+        // Esegui entrambe le query in parallelo
+        const [orders, totalResult] = await Promise.all([
+            ordersQuery.limit(limit).offset(offset),
+            countQuery.first()
+        ]);
+
+        // Calcola informazioni di paginazione
+        const total = totalResult.count;
+        const totalPages = Math.ceil(total / limit);
+
+        // Se non ci sono risultati, restituisci un array vuoto
+        if (orders.length === 0) {
+            return res.json({
+                data: [],
+                pagination: {
+                    currentPage: Number(page),
+                    totalPages: 0,
+                    totalItems: 0,
+                    itemsPerPage: limit
                 }
             });
         }
-        
-        const total = await countQuery;
-        const totalPages = Math.ceil(total.count / limit);
 
         res.json({
             data: orders,
             pagination: {
                 currentPage: Number(page),
                 totalPages,
-                totalItems: total.count,
+                totalItems: total,
                 itemsPerPage: limit
             }
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: "Errore interno del server" });
     }
 });
@@ -165,7 +176,7 @@ router.delete("/:id", async (req, res) => {
             const orderExists = await trx('orders').where('id', id).first();
             if (!orderExists) throw new Error("Ordine non trovato");
 
-            await trx('order_products').where('order_id', id).del();
+            await trx('order_products').where('order_id', id).del(); // DELETE FROM order_products WHERE order_id = id
             await trx('order_users').where('order_id', id).del();
             await trx('orders').where('id', id).del();
         });

@@ -1,4 +1,5 @@
 require('dotenv').config();
+// knex.js per la connessione al database e la gestione delle query
 const knex = require('knex')({
   client: 'mysql2',
   connection: {

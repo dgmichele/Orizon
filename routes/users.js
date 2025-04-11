@@ -11,7 +11,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: "Tutti i campi sono obbligatori" });
     }
 
-    const [userId] = await db('users').insert({
+    const [userId] = await db('users').insert({ // usiamo la destrutturazione per ottenere il primo elemento che corrisponde all'ID dell'utente appena creato
       nome,
       cognome,
       email
@@ -31,14 +31,14 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = 2;
-    const offset = (page - 1) * limit;
+    const limit = 10;
+    const offset = (page - 1) * limit; 
 
     // Query principale con paginazione
     const users = await db('users')
       .select('*')
-      .limit(limit)
-      .offset(offset)
+      .limit(limit) // 10 utenti per pagina
+      .offset(offset) // da dove iniziare a contare gli utenti 
       .orderBy('id', 'asc');
 
     // Conta totale utenti per la paginazione
