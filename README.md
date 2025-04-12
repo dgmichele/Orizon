@@ -7,10 +7,10 @@
 - **Node.js** – Ambiente di esecuzione JavaScript lato server.
 - **Express** – Framework per la creazione di API REST in maniera semplice ed efficiente.
 - **MySQL** – Database relazionale utilizzato per la persistenza dei dati.
-- **mysql2** – Driver per interfacciarsi con MySQL in modo asincrono.
+- **mysql2** – Driver per interfacciarsi con MySQL in modo asincrono (necessario per knex.js).
 - **dotenv** – Gestione delle variabili di ambiente.
 - **Nodemon** – Strumento per lo sviluppo che riavvia automaticamente il server ad ogni modifica.
-- **Jest** e **Supertest** – Per l'esecuzione dei test automatizzati.
+- **Knex** - Query builder per ottimizzare la gestione del database
 
 ## Struttura e Funzionamento delle API
 
@@ -18,8 +18,7 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 
 - **`index.js`**
 
-  - Punto di ingresso dell'applicazione.
-  - Effettua un test di connessione al database e avvia il server sulla porta specificata.
+  - Punto di ingresso dell'applicazione e avvia il server sulla porta specificata.
 
 - **`server.js`**
 
@@ -30,7 +29,8 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
 
 - **`db.js`**
 
-  - Configura la connessione a MySQL utilizzando le variabili di ambiente.
+  - Con knex.js si configura la connessione a MySQL utilizzando le variabili di ambiente.
+  - Effettua un test di connessione al database.
 
 - **`migration.sql`**
 
@@ -56,27 +56,6 @@ Il progetto è organizzato in moduli che gestiscono le diverse risorse (utenti, 
   - **GET**: Recupera tutti gli ordini, con possibilità di filtrarli per data o per ID di prodotto tramite query string.
   - **PUT**: Aggiorna un ordine esistente modificando le associazioni con utenti e prodotti.
   - **DELETE**: Elimina un ordine e rimuove tutte le relative associazioni.
-
-- **`test/users.test.js`**
-
-  - **POST**: Testa la creazione di un nuovo utente con validazione dei campi.
-  - **GET**: Testa il recupero della lista degli utenti.
-  - **PUT**: Testa l'aggiornamento di un utente specificato tramite ID.
-  - **DELETE**: Testa l'eliminazione di un utente in base all'ID.
-
-- **`test/products.test.js`**
-
-  - **GET**: Verifica che vengano restituiti tutti i prodotti.
-  - **POST**: Testa la creazione di un nuovo prodotto.
-  - **PUT**: Testa l'aggiornamento del nome di un prodotto esistente tramite ID.
-  - **DELETE**: Testa l'eliminazione di un prodotto in base all'ID.
-
-- **`test/orders.test.js`**
-
-  - **POST**: Verifica la creazione di un nuovo ordine, inclusa l'associazione con utente e prodotti e la gestione delle transazioni.
-  - **GET**: Testa il recupero degli ordini, con e senza filtri (es. per data).
-  - **PUT**: Verifica l'aggiornamento di un ordine, modificando le associazioni con utenti e prodotti.
-  - **DELETE**: Testa l'eliminazione di un ordine e delle relative associazioni.
 
 ## Requisiti
 
@@ -133,9 +112,3 @@ Oppure, per avviare in modalità sviluppo con **nodemon**:
     npm run dev
 
 2. **Accedi all'API** visitando [http://localhost:3000](http://localhost:3000) nel tuo browser. La root mostra un messaggio di benvenuto: "Benvenuto in Orizon!".
-
-## Esecuzione dei Test
-
-Per eseguire i test, assicurati di aver impostato la variabile di ambiente `NODE_ENV` a `test` e utilizza il comando:
-
-    npm test
