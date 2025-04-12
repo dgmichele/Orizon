@@ -54,9 +54,29 @@ router.get("/", async (req, res) => {
         const limit = 10;
         const offset = (page - 1) * limit;
 
+        // Funzione per applicare i filtri comuni
+        const applyFilters = (query) => {
+            // Filtra gli ordini in base alla data di creazione
+            if (data) {
+                query.whereRaw('DATE(o.data_creazione) = ?', [data]);
+            }
+            
+            // Filtra gli ordini che hanno il prodotto specificato
+            if (product_id) {
+                query.whereExists(
+                    db.select('*')
+                        .from('order_products')
+                        .whereRaw('order_products.order_id = o.id')
+                        .where('product_id', product_id)
+                );
+            }
+            
+            return query;
+        };
+
         // Costruisci la query di base
-        const ordersQuery = db('orders as o')
-            .leftJoin('order_users as ou', 'o.id', 'ou.order_id') // LEFT JOIN order_users ou ON o.id = ou.order_id
+        let ordersQuery = db('orders as o')
+            .leftJoin('order_users as ou', 'o.id', 'ou.order_id')  // LEFT JOIN order_users ou ON o.id = ou.order_id
             .leftJoin('users as u', 'ou.user_id', 'u.id') // LEFT JOIN users u ON ou.user_id = u.id
             .leftJoin('order_products as op', 'o.id', 'op.order_id') // LEFT JOIN order_products op ON o.id = op.order_id
             .leftJoin('products as p', 'op.product_id', 'p.id') // LEFT JOIN products p ON op.product_id = p.id
@@ -71,28 +91,20 @@ router.get("/", async (req, res) => {
                 'p.nome as product_nome'
             )
             .orderBy('o.data_creazione', 'desc');
-
-        // Filtra gli ordini in base alla data di creazione
-        if (data) {
-            ordersQuery.whereRaw('DATE(o.data_creazione) = ?', [data]);
-        }
         
-        // Filtra gli ordini che hanno il prodotto specificato
+        // Applica i filtri comuni
+        ordersQuery = applyFilters(ordersQuery);
+        
+        // Filtro aggiuntivo specifico per la query di selezione
         if (product_id) {
-            ordersQuery.whereExists(
-                db.select('*')
-                    .from('order_products')
-                    .whereRaw('order_products.order_id = o.id')
-                    .where('product_id', product_id)
-            );
-            
-            // Filtra anche i risultati per mostrare solo il prodotto richiesto
             ordersQuery.andWhere('p.id', product_id);
         }
 
-        // Query per contare il totale degli ordini (per la paginazione)
-        const countQuery = db('orders as o')
-            .countDistinct('o.id as count');
+        // Query per contare il totale degli ordini
+        let countQuery = db('orders as o').countDistinct('o.id as count');
+        
+        // Applica gli stessi filtri alla query di conteggio
+        countQuery = applyFilters(countQuery);
 
         // Esegui entrambe le query in parallelo
         const [orders, totalResult] = await Promise.all([
