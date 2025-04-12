@@ -116,17 +116,9 @@ router.get("/", async (req, res) => {
         const total = totalResult.count;
         const totalPages = Math.ceil(total / limit);
 
-        // Se non ci sono risultati, restituisci un array vuoto
+        // Controlla se ci sono ordini
         if (orders.length === 0) {
-            return res.json({
-                data: [],
-                pagination: {
-                    currentPage: Number(page),
-                    totalPages: 0,
-                    totalItems: 0,
-                    itemsPerPage: limit
-                }
-            });
+            return res.status(404).send("Nessun ordine trovato");
         }
 
         res.json({
