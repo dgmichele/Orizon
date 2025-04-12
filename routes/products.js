@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
             pagination: {
                 currentPage: page,
                 totalPages,
-                totalItems: totalProducts.count,
+                totalProducts: totalProducts.count,
                 itemsPerPage: limit
             }
         });

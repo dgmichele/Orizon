@@ -69,6 +69,10 @@ router.get("/", async (req, res) => {
                         .whereRaw('order_products.order_id = o.id')
                         .where('product_id', product_id)
                 );
+                // Filtro aggiuntivo per il join con la tabella dei prodotti
+                if (product_id) {
+                    ordersQuery.andWhere('p.id', product_id);
+                }
             }
             
             return query;
@@ -95,11 +99,6 @@ router.get("/", async (req, res) => {
         // Applica i filtri comuni
         ordersQuery = applyFilters(ordersQuery);
         
-        // Filtro aggiuntivo specifico per la query di selezione
-        if (product_id) {
-            ordersQuery.andWhere('p.id', product_id);
-        }
-
         // Query per contare il totale degli ordini
         let countQuery = db('orders as o').countDistinct('o.id as count');
         
@@ -116,17 +115,12 @@ router.get("/", async (req, res) => {
         const total = totalResult.count;
         const totalPages = Math.ceil(total / limit);
 
-        // Controlla se ci sono ordini
-        // if (orders.length === 0) {
-        //     return res.status(404).send("Nessun ordine trovato");
-        // }
-
         res.json({
             data: orders,
             pagination: {
                 currentPage: Number(page),
                 totalPages,
-                totalItems: total,
+                totalOrders: total,
                 itemsPerPage: limit
             }
         });
