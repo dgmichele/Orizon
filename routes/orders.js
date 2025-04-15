@@ -144,10 +144,11 @@ router.put("/:id", async (req, res) => {
             const orderExists = await trx('orders').where('id', orderId).first();
             if (!orderExists) throw new Error("Ordine non trovato");
 
-            // Elimina e ricrea associazioni
+            // Elimina le associazioni
             await trx('order_users').where('order_id', orderId).del();
             await trx('order_products').where('order_id', orderId).del();
 
+            // Ricrea le associazioni
             if (utenti.length > 0) {
                 await trx('order_users').insert(
                     utenti.map(userId => ({ order_id: orderId, user_id: userId }))
@@ -173,9 +174,11 @@ router.delete("/:id", async (req, res) => {
         await db.transaction(async trx => {
             const orderExists = await trx('orders').where('id', id).first();
             if (!orderExists) throw new Error("Ordine non trovato");
-
+            
+            // Elimina le associazioni delle tabelle ponte
             await trx('order_products').where('order_id', id).del(); // DELETE FROM order_products WHERE order_id = id
             await trx('order_users').where('order_id', id).del();
+            // Elimina l'ordine
             await trx('orders').where('id', id).del();
         });
 
